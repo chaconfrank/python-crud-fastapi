@@ -1,59 +1,62 @@
-from fastapi import FastAPI, HTTPException
+from enum import Enum
+from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Text, Optional
-from datetime import  datetime
-from uuid import uuid4 as uuid
+from typing import Optional
+from bcrypt import checkpw
+from datetime import date
 
 app = FastAPI()
 
-posts = []
-
-class Post(BaseModel):
-    id:Optional[str]
-    title:str
-    author:str
-    content:Text
-    create_date:datetime = datetime.now()
-    published_at:Optional[datetime]
-    published:bool = False
-
-@app.get('/')
-def read_root():
-    return {"welcome":"welcome to my REST API"}
+valid_users = dict()
+pending_users = dict()
 
 
-@app.get('/posts')
-def get_posts():
-    return posts
+class User(BaseModel):
+    username: str
+    password: str
 
-@app.post('/posts')
-def save_post(post:Post):
-    post.id = str(uuid())
-    posts.append(post.dict())
-    return posts[-1]
 
-@app.get('/posts/{id}')
-def get_post(id:str):
-    for post in posts:
-        if post["id"] == id:
-            return post
-    raise HTTPException(404, detail="post not found")
+class UserType(str, Enum):
+    admin = 'admin'
+    teacher = 'teacher'
+    student = 'student'
+    alumni = 'alumni'
 
-@app.delete('/posts/{id}')
-def delete_post(id:str):
-    for index, post in enumerate(posts):
-        if post["id"] == id:
-            posts.pop(index)
-            return {"message" : "post deleted"}
-    raise HTTPException(404, detail="post not found")
 
-@app.put('/posts/{id}')
-def update_post(id:str, updatePost: Post):
-    for index, post in enumerate(posts):
-        if post["id"] == id:
-            posts[index]["title"] = updatePost.title
-            posts[index]["content"] = updatePost.content
-            posts[index]["author"] = updatePost.author
-            return {"message": "post has been updated suc"}
-    raise HTTPException(404, detail="post not found")
+class UserProfile(BaseModel):
+    first_name: str
+    last_name: str
+    middle_initial: str
+    age: Optional[int] = 0
+    salary: Optional[int] = 0
+    birthday: date
+    user_type: UserType
 
+
+@app.get("/api/index")
+def index():
+    return {'message': 'Welcome to FastApi'}
+
+
+@app.get("/api/login")
+def login(username: str, password: str):
+    if valid_users.get(username) == None:
+        return {'message': 'User doesnt exist'}
+    else:
+        user: valid_users.get(username)
+        if checkpw(password.encode(), user.passphare.encode()):
+            return user
+        else:
+            return {'message': 'Invalid user'}
+
+
+@app.post("/api/login/signup")
+def signup(username: str, password: str):
+    if username == None or password == None:
+        return {'message': 'Invalid user'}
+    elif not valid_users.get(username) == None:
+        return {'message': 'User exist'}
+    else:
+        user = User(username=username, password=password)
+        pending_users[username] = user
+        return user
