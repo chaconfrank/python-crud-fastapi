@@ -9,8 +9,6 @@ app = FastAPI()
 
 valid_users = dict()
 pending_users = dict()
-
-
 class User(BaseModel):
     username: str
     password: str
